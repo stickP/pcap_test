@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include "pcap.h"
 #include <arpa/inet.h>
+#include <netinet/ether.h>
 
 #define SIZE_ETHERNET 14
-
 
 /*
 struct pcap_pkthdr{
@@ -16,8 +16,7 @@ struct pcap_pkthdr{
 */
 
 struct ether_hdr{
-    u_char ether_dmac[6];
-    u_char ether_smac[6];
+    struct ether_addr dmac, smac;
     u_short ether_type;
 };
 
@@ -33,11 +32,11 @@ struct ip_hdr{
     struct in_addr ip_src, ip_dst;
 };
 
-#define IP_HL(ip) (((ip)->ip_vhl) >> 4)
+#define IP_HL(ip) ((ip->ip_vhl) & 0x0f)
 
 struct tcp_hdr{
     u_short tcp_srcp;
-    u_short tcp_detp;
+    u_short tcp_dstp;
     u_int tcp_seqnum;
     u_int tcp_acknum;
     u_char tcp_offset_rsvd;
@@ -51,9 +50,7 @@ struct tcp_hdr{
 
 int main(){
 
-    //u_char *pcap_next(pcap_t *p, struct pcap_pkthdr *h)
-
-    int i;
+    int cnt;
     char *dev;
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t *handle;
@@ -63,7 +60,8 @@ int main(){
     bpf_u_int32 net;
     struct pcap_pkthdr header;
     const u_char *packet;
-    const u_char *res;    
+    const u_char *res;
+    const u_int *swap_sp, *swap_dp;
 
     const struct ether_hdr *ethernet;
     const struct ip_hdr *ip;
@@ -102,7 +100,13 @@ int main(){
         return 2;
     }
 
+    cnt = 0;
+
     while((res = pcap_next_ex(handle, &header, &packet) >= 0)){
+
+        cnt++;
+        if(cnt > 30)
+            break;
 
         if (res == 0)
             continue;
@@ -126,31 +130,18 @@ int main(){
 
         payload = (u_char*)(packet + SIZE_ETHERNET + size_ip + size_tcp);
 
-
-        printf("\n");
-        printf("Sorce Mac Address:          ");
-        for (i = 0; i< 6; i++){
-            printf("%02x", ethernet->ether_smac[i]);
-            if(i<5){
-                printf(":");
-            }
-        }printf("\n");
-        printf("Destination Mac Address:    ");
-        for (i = 0; i< 6; i++){
-            printf("%02x", ethernet->ether_dmac[i]);
-            if(i<5){
-                printf(":");
-            }
-        }printf("\n");
-
-        //(int)strtol(szHex, NULL, 16)
+        swap_sp = (((tcp->tcp_srcp)&0xff)<<8) | (((tcp->tcp_srcp)>>8)&0xff);
+        swap_dp = (((tcp->tcp_dstp)&0xff)<<8) | (((tcp->tcp_dstp)>>8)&0xff);
 
         printf("-------------------------------------------------\n");
-        printf("Sorce IP Address:           %s\n", inet_ntoa(ip->ip_src));
-        printf("Destination IP Address:     %s\n", inet_ntoa(ip->ip_dst));
+        printf("Sorce Mac Address:                %s\n", ether_ntoa(&ethernet->smac));
+        printf("Destination Mac Address:          %s\n", ether_ntoa(&ethernet->dmac));
         printf("-------------------------------------------------\n");
-        printf("Sorce Port:                 %x\n", tcp->tcp_srcp);
-        printf("Destination Port:           %x\n", tcp->tcp_detp);
+        printf("Sorce IP Address:                 %s\n", inet_ntoa(ip->ip_src));
+        printf("Destination IP Address:           %s\n", inet_ntoa(ip->ip_dst));
+        printf("-------------------------------------------------\n");
+        printf("Sorce Port:                       %d\n", swap_sp);
+        printf("Destination Port:                 %d\n", swap_dp);
         printf("-------------------------------------------------\n");
         printf("Data:\n%s\n", payload);
         printf("-------------------------------------------------\n");
