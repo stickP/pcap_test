@@ -46,7 +46,7 @@ struct tcp_hdr{
     u_short tcp_urgp;
 };
 
-#define TCP_OFF(tcp) (((tcp)->tcp_offset_rsvd & 0xf0) >> 4)
+#define TCP_OFF(tcp) (((tcp->tcp_offset_rsvd) & 0xf0) >> 4)
 
 int main(){
 
@@ -61,7 +61,6 @@ int main(){
     struct pcap_pkthdr header;
     const u_char *packet;
     const u_char *res;
-    const u_int *swap_sp, *swap_dp;
 
     const struct ether_hdr *ethernet;
     const struct ip_hdr *ip;
@@ -128,11 +127,6 @@ int main(){
             continue;
         }
 
-        payload = (u_char*)(packet + SIZE_ETHERNET + size_ip + size_tcp);
-
-        swap_sp = (((tcp->tcp_srcp)&0xff)<<8) | (((tcp->tcp_srcp)>>8)&0xff);
-        swap_dp = (((tcp->tcp_dstp)&0xff)<<8) | (((tcp->tcp_dstp)>>8)&0xff);
-
         printf("-------------------------------------------------\n");
         printf("Sorce Mac Address:                %s\n", ether_ntoa(&ethernet->smac));
         printf("Destination Mac Address:          %s\n", ether_ntoa(&ethernet->dmac));
@@ -140,11 +134,19 @@ int main(){
         printf("Sorce IP Address:                 %s\n", inet_ntoa(ip->ip_src));
         printf("Destination IP Address:           %s\n", inet_ntoa(ip->ip_dst));
         printf("-------------------------------------------------\n");
-        printf("Sorce Port:                       %d\n", swap_sp);
-        printf("Destination Port:                 %d\n", swap_dp);
+        printf("Sorce Port:                       %d\n", ntohs(tcp->tcp_srcp));
+        printf("Destination Port:                 %d\n", ntohs(tcp->tcp_dstp));
         printf("-------------------------------------------------\n");
         printf("Data:\n%s\n", payload);
         printf("-------------------------------------------------\n");
+
+//        if (size_tcp > 20){
+//            payload = (u_char*)(packet + SIZE_ETHERNET + size_ip + size_tcp);
+//            printf("Data:\n%s\n", payload);
+//        }
+//        else
+//            printf("No Data\n");
+//        printf("-------------------------------------------------\n");
 
     }
 
