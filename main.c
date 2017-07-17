@@ -67,6 +67,7 @@ int main(){
     const struct tcp_hdr *tcp;
     const char *payload;
 
+    u_int size_payload;
     u_int size_ip;
     u_int size_tcp;
 
@@ -137,16 +138,16 @@ int main(){
         printf("Sorce Port:                       %d\n", ntohs(tcp->tcp_srcp));
         printf("Destination Port:                 %d\n", ntohs(tcp->tcp_dstp));
         printf("-------------------------------------------------\n");
-        printf("Data:\n%s\n", payload);
-        printf("-------------------------------------------------\n");
 
-//        if (size_tcp > 20){
-//            payload = (u_char*)(packet + SIZE_ETHERNET + size_ip + size_tcp);
-//            printf("Data:\n%s\n", payload);
-//        }
-//        else
-//            printf("No Data\n");
-//        printf("-------------------------------------------------\n");
+        size_payload = ntohs(ip->ip_tlen) - (size_ip + size_tcp);
+
+        if (size_payload > 0){
+            payload = (u_char*)(packet + SIZE_ETHERNET + size_ip + size_tcp);
+            printf("Data:\n%s\n", payload);
+        }
+        else
+            printf("No Data\n");
+        printf("-------------------------------------------------\n");
 
     }
 
