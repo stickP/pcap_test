@@ -1,7 +1,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "pcap.h"
+#include <stdint.h>
+#include <pcap.h>
 #include <arpa/inet.h>
 #include <netinet/ether.h>
 
@@ -17,41 +18,42 @@ struct pcap_pkthdr{
 
 struct ether_hdr{
     struct ether_addr dmac, smac;
-    u_short ether_type;
+    u_int16_t ether_type;
 };
 
 struct ip_hdr{
-    u_char ip_vhl;
-    u_char ip_tos;
-    u_short ip_tlen;
-    u_short ip_id;
-    u_short ip_offset;
-    u_char ip_ttl;
-    u_char ip_protocol;
-    u_short ip_check;
+    u_int8_t ip_vhl;
+    u_int8_t ip_tos;
+    u_int16_t ip_tlen;
+    u_int16_t ip_id;
+    u_int16_t ip_offset;
+    u_int8_t ip_ttl;
+    u_int8_t ip_protocol;
+    u_int16_t ip_check;
     struct in_addr ip_src, ip_dst;
 };
 
 #define IP_HL(ip) ((ip->ip_vhl) & 0x0f)
 
 struct tcp_hdr{
-    u_short tcp_srcp;
-    u_short tcp_dstp;
-    u_int tcp_seqnum;
-    u_int tcp_acknum;
-    u_char tcp_offset_rsvd;
-    u_char tcp_flags;
-    u_short tcp_win;
-    u_short tcp_check;
-    u_short tcp_urgp;
+    u_int16_t tcp_srcp;
+    u_int16_t tcp_dstp;
+    u_int32_t tcp_seqnum;
+    u_int32_t tcp_acknum;
+    u_int8_t tcp_offset_rsvd;
+    u_int8_t tcp_flags;
+    u_int16_t tcp_win;
+    u_int16_t tcp_check;
+    u_int16_t tcp_urgp;
 };
 
 #define TCP_OFF(tcp) (((tcp->tcp_offset_rsvd) & 0xf0) >> 4)
 
-int main(){
+int main(int argc, char argv[]){
 
     int cnt;
     char *dev;
+    char buf[15];
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t *handle;
     struct bpf_program fp;
@@ -59,17 +61,17 @@ int main(){
     bpf_u_int32 mask;
     bpf_u_int32 net;
     struct pcap_pkthdr header;
-    const u_char *packet;
-    const u_char *res;
+    const u_int8_t *packet;
+    const u_int8_t *res;
 
     const struct ether_hdr *ethernet;
     const struct ip_hdr *ip;
     const struct tcp_hdr *tcp;
     const char *payload;
 
-    u_int size_payload;
-    u_int size_ip;
-    u_int size_tcp;
+    u_int32_t size_payload;
+    u_int32_t size_ip;
+    u_int32_t size_tcp;
 
     //pcap_t *pcap_open_live(char *device, int snaplen, int promisc, int to_ms, char *ebuf);
     //int pcap_compile(pcap_t *p, struct bpf_program *fp, char *str, int optimize, bpf_u_int32 netmask)
@@ -77,12 +79,16 @@ int main(){
     //int pcap_loop(pcap_t *p, int cnt, pcap_handler callback, u_char *user)
     //void got_packet(u_char *args, cont struct pcap_pkthdr, *header, const u_char *packet)
 
+    /*
     dev = pcap_lookupdev(errbuf);
     if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1){
         fprintf(stderr, "Can't get netmask for device %s\n", dev);
         net = 0;
         mask = 0;
     }
+    */
+
+    dev = "ens33";
 
     handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
     if (handle == NULL) {
@@ -132,8 +138,10 @@ int main(){
         printf("Sorce Mac Address:                %s\n", ether_ntoa(&ethernet->smac));
         printf("Destination Mac Address:          %s\n", ether_ntoa(&ethernet->dmac));
         printf("-------------------------------------------------\n");
-        printf("Sorce IP Address:                 %s\n", inet_ntoa(ip->ip_src));
-        printf("Destination IP Address:           %s\n", inet_ntoa(ip->ip_dst));
+        inet_ntop(AF_INET, &(ip->ip_src), buf, sizeof(buf));
+        printf("Sorce IP Address:                 %s\n", buf);
+        inet_ntop(AF_INET, &(ip->ip_dst), buf, sizeof(buf));
+        printf("Destination IP Address:           %s\n", buf);
         printf("-------------------------------------------------\n");
         printf("Sorce Port:                       %d\n", ntohs(tcp->tcp_srcp));
         printf("Destination Port:                 %d\n", ntohs(tcp->tcp_dstp));
@@ -142,7 +150,7 @@ int main(){
         size_payload = ntohs(ip->ip_tlen) - (size_ip + size_tcp);
 
         if (size_payload > 0){
-            payload = (u_char*)(packet + SIZE_ETHERNET + size_ip + size_tcp);
+            payload = (u_int8_t*)(packet + SIZE_ETHERNET + size_ip + size_tcp);
             printf("Data:\n%s\n", payload);
         }
         else
