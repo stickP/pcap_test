@@ -49,16 +49,16 @@ struct tcp_hdr{
 
 #define TCP_OFF(tcp) (((tcp->tcp_offset_rsvd) & 0xf0) >> 4)
 
-int main(int argc, char argv[]){
+int main(int argc, char *argv[]){
 
     int cnt;
     char *dev;
-    char buf[15];
+    char buf[20];
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t *handle;
     struct bpf_program fp;
     char filter_exp[] = "port 80";
-    bpf_u_int32 mask;
+    //bpf_u_int32 mask;
     bpf_u_int32 net;
     struct pcap_pkthdr header;
     const u_int8_t *packet;
@@ -67,7 +67,7 @@ int main(int argc, char argv[]){
     const struct ether_hdr *ethernet;
     const struct ip_hdr *ip;
     const struct tcp_hdr *tcp;
-    const char *payload;
+    const u_int8_t *payload;
 
     u_int32_t size_payload;
     u_int32_t size_ip;
@@ -88,7 +88,7 @@ int main(int argc, char argv[]){
     }
     */
 
-    dev = "ens33";
+    dev = argv[1];
 
     handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
     if (handle == NULL) {
