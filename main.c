@@ -67,7 +67,7 @@ int main(int argc, char *argv[]){
     const struct ether_hdr *ethernet;
     const struct ip_hdr *ip;
     const struct tcp_hdr *tcp;
-    const u_int8_t *payload;
+    const char *payload;
 
     u_int32_t size_payload;
     u_int32_t size_ip;
@@ -150,7 +150,7 @@ int main(int argc, char *argv[]){
         size_payload = ntohs(ip->ip_tlen) - (size_ip + size_tcp);
 
         if (size_payload > 0){
-            payload = (u_int8_t*)(packet + SIZE_ETHERNET + size_ip + size_tcp);
+            payload = (char*)(packet + SIZE_ETHERNET + size_ip + size_tcp);
             printf("Data:\n%s\n", payload);
         }
         else
